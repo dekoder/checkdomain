@@ -5,7 +5,7 @@ import sys
 import re
 import requests
 import threading
-
+import time
 
 
 def banner():
@@ -24,17 +24,16 @@ def banner():
  ╚═════╝╚═╝  ╚═╝╚═════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝
                                                                  %s%s
 
-                V-2.0 # Coded By Imanfeng 
+                V-2.2 # Modified By z3r0yu 
         """ % (R, W, Y))
 
 
 def parse_args():#命令定义
-    parser = argparse.ArgumentParser(description='Example:python checkDomain.py -f alimama.txt -p 80,8080')
+    parser = argparse.ArgumentParser(description='Example:python checkDomain.py -f alimama.txt -p 80,443,8080,7001')
     parser.error=parse_error
     parser._optionals.title='OPTIONS'
     parser.add_argument('-p','--port',metavar="",default='80',help='choose a port or ports')
     parser.add_argument('-f','--file',metavar="",default='',help='choose a subdomain txt')
-    parser.add_argument('-o','--outfile',metavar="",default='',help='save a file')
     return parser.parse_args()
 
 
@@ -53,34 +52,34 @@ def open_file(filename):#读取域名文件
     subdomain = []
     for eachline in files:
         #print eachline
-    	line1,line2 = re.split('\s\s+|\t',eachline.strip())
-        line2 = line2.split(",")
-        subdomain = line2 + subdomain       
-        subdomain.append(line1)
-        
+        line = eachline.strip()      
+        subdomain.append(line)
     return subdomain
 
 
 def check_state(i,port,subdomain_ip):#检查主机状态
     ports = port.split(",")
     for port in ports:
-        url = "http://%s:%s"%(subdomain_ip,port)
+        if str(port) != "443":
+            url = "http://%s:%s"%(subdomain_ip,port)
+        if str(port) == "443":
+            url = "https://%s"%(subdomain_ip)
         try:
             r = requests.get(url,timeout=4)
             status = r.status_code
             if status in {200,301}:
-                print "\033[91m[Interesting]:{}:{}".format(subdomain_ip,port)
-                intersting.append(subdomain_ip)
+                print "\033[91m[Interesting]:{}".format(url)
+                intersting.append(url)
         except:
-            print "\033[0m[Down]:{}:{}".format(subdomain_ip,port)
+            print "\033[0m[Down]:{}".format(url)
 
 
-def write(ip,infilename,filename):#写进文件
-    filename == ''
-    filename = 'out.'+infilename
+def write(ip):#写进文件
+    filename = str(time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime()))
+    print filename
     file = open(filename,'w')
-    for i,this_ip in enumerate(ip):
-        file.writelines(['%d-----------%s\n' % (i+1,this_ip)])
+    for this_ip in ip:
+        file.writelines(this_ip+'\n')
     file.close()
 
 
@@ -99,12 +98,12 @@ def go_threading(nums,port,subdomain_ip):#调用多线程
     print '\n\033[1;32m[DONE..]'
 
 
-def main(port,infile,outfile): 
+def main(port,infile): 
     subdomain_ip = open_file(infile)
     subdomain_ip = list(set(subdomain_ip))#去重ip/域名
     nums = range(len(subdomain_ip))
     go_threading(nums,port,subdomain_ip)
-    write(intersting,infile,outfile)
+    write(intersting)
 
 
 if __name__ == '__main__':
@@ -112,7 +111,6 @@ if __name__ == '__main__':
     args = parse_args()
     port = args.port
     infile = args.file
-    outfile = args.outfile
-    main(port,infile,outfile)
+    main(port,infile)
     
     
